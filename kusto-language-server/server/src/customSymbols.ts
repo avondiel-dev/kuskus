@@ -161,41 +161,34 @@ export function mergeGlobalStates(
     existingState: any,
     customState: any
 ): any {
+    // If no existing state, return custom state
     if (!existingState || !existingState.Database) {
+        console.log('[CustomSymbols] No existing state, using custom state only');
         return customState;
     }
 
+    // If no custom state, return existing state
     if (!customState || !customState.Database) {
+        console.log('[CustomSymbols] No custom state, using existing state only');
         return existingState;
     }
 
-    // Get members from both databases
-    const existingMembers = existingState.Database.Members || [];
-    const customMembers = customState.Database.Members || [];
+    console.log('[CustomSymbols] Merging custom symbols with existing database');
 
-    // Merge members (custom symbols override existing ones with the same name)
-    const memberMap = new Map();
+    // Get custom symbols as array
+    const customSymbols: any[] = [];
+    const customMembers = customState.Database.Members;
 
-    // Add existing members first
-    for (const member of existingMembers) {
-        if (member && member.Name) {
-            memberMap.set(member.Name, member);
+    if (customMembers && customMembers.Count > 0) {
+        for (let i = 0; i < customMembers.Count; i++) {
+            customSymbols.push(customMembers._items[i]);
         }
     }
 
-    // Add/override with custom members
-    for (const member of customMembers) {
-        if (member && member.Name) {
-            memberMap.set(member.Name, member);
-        }
-    }
+    console.log(`[CustomSymbols] Adding ${customSymbols.length} custom symbols to existing database`);
 
-    // Create merged database
-    const mergedSymbols = Array.from(memberMap.values());
-    const mergedDatabase = new Kusto.Language.Symbols.DatabaseSymbol.ctor(
-        existingState.Database.Name || "Database",
-        mergedSymbols
-    );
+    // Use the Kusto API's AddSymbols method to merge
+    const mergedDatabase = existingState.Database.AddSymbols(customSymbols);
 
     return existingState.WithDatabase(mergedDatabase);
 }
