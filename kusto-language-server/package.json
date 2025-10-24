@@ -59,6 +59,93 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Whether diagnostics are enabled or not (red squiggly underlines, Problems tab)"
+                },
+                "kuskus.customTables": {
+                    "scope": "resource",
+                    "type": "array",
+                    "default": [],
+                    "description": "Custom table definitions for Azure Resource Graph or other Kusto-like environments",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "name",
+                            "columns"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "Table name"
+                            },
+                            "description": {
+                                "type": "string",
+                                "description": "Table description"
+                            },
+                            "columns": {
+                                "type": "array",
+                                "description": "Column definitions",
+                                "items": {
+                                    "type": "object",
+                                    "required": [
+                                        "name",
+                                        "type"
+                                    ],
+                                    "properties": {
+                                        "name": {
+                                            "type": "string",
+                                            "description": "Column name"
+                                        },
+                                        "type": {
+                                            "type": "string",
+                                            "description": "Column type (string, int, long, real, bool, datetime, dynamic, etc.)"
+                                        },
+                                        "description": {
+                                            "type": "string",
+                                            "description": "Column description"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "kuskus.customProperties": {
+                    "scope": "resource",
+                    "type": "object",
+                    "default": {},
+                    "description": "Custom property completions for dynamic columns (e.g., 'resources.properties': ['provisioningState', 'enabled'])",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "kuskus.customFunctions": {
+                    "scope": "resource",
+                    "type": "array",
+                    "default": [],
+                    "description": "Custom function definitions",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "name",
+                            "returnType"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "Function name"
+                            },
+                            "description": {
+                                "type": "string",
+                                "description": "Function description"
+                            },
+                            "returnType": {
+                                "type": "string",
+                                "description": "Return type (string, int, bool, dynamic, etc.)"
+                            }
+                        }
+                    }
                 }
             }
         },
@@ -82,7 +169,7 @@
         "glob": "^7.2.0",
         "mocha": "^9.2.2",
         "tslint": "^5.16.0",
-        "typescript": "^3.5.1"
+        "typescript": "^5.5.4"
     },
     "dependencies": {
         "@types/lodash": "^4.14.136",

@@ -152,3 +152,13 @@ commands.registerCommand('kuskus.loadTable', async () => {
 		window.showErrorMessage('Extension not yet loaded. Hold your horses. Please wait a moment and try again.');
 	}
 });
+
+// add some code to test the language server
+commands.registerCommand('kuskus.test', async () => {
+	if (client) {
+		const result = await client.sendRequest('kuskus.test');
+		window.showInformationMessage(`[kuskus.test] ${result}`);
+	} else {
+		window.showErrorMessage('Extension not yet loaded. Hold your horses. Please wait a moment and try again.');
+	}
+});

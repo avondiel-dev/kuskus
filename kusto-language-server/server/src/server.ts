@@ -25,6 +25,7 @@ import { getClient as getKustoClient, TokenResponse, getFirstOrDefaultClient } f
 import { getSymbolsOnCluster, getSymbolsOnTable } from './kustoSymbols';
 import { formatCodeScript } from './kustoFormat';
 import { getVSCodeCompletionItemsAtPosition } from './kustoCompletion';
+import { createCustomGlobalState, mergeGlobalStates, CustomTableConfig, CustomFunctionConfig } from './customSymbols';
 
 // Create a connection for the server. The connection uses Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -83,6 +84,9 @@ connection.onInitialized(async () => {
             connection.console.log('Workspace folder change event received.');
         });
     }
+
+    // Load custom symbols from configuration
+    await loadCustomSymbols();
 });
 
 connection.onRequest('kuskus.loadSymbols', async ({ clusterUri, tenantId, database }: { clusterUri: string, tenantId: string, database: string }) => {
@@ -124,6 +128,9 @@ connection.onRequest('kuskus.loadTable', async ( tableName : string) => {
 // The example settings
 interface Settings {
 	diagnosticsEnabled: boolean;
+	customTables?: CustomTableConfig[];
+	customFunctions?: CustomFunctionConfig[];
+	customProperties?: { [key: string]: string[] };
 }
 
 // The global settings, used when the `workspace/configuration` request is not supported by the client.
@@ -137,7 +144,7 @@ let globalSettings: Settings = defaultSettings;
 // Cache the settings of all open documents
 let documentSettings: Map<string, Thenable<Settings>> = new Map();
 
-connection.onDidChangeConfiguration(change => {
+connection.onDidChangeConfiguration(async change => {
 	if (hasConfigurationCapability) {
 		// Reset all cached document settings
 		documentSettings.clear();
@@ -146,6 +153,9 @@ connection.onDidChangeConfiguration(change => {
 			(change.settings.languageServerExample || defaultSettings)
 		);
 	}
+
+	// Reload custom symbols when configuration changes
+	await loadCustomSymbols();
 
 	// Revalidate all open text documents
 	documents.all().forEach(validateTextDocument);
@@ -164,6 +174,52 @@ function getDocumentSettings(resource: string): Thenable<Settings> {
 		documentSettings.set(resource, result);
 	}
 	return result;
+}
+
+async function getCustomConfiguration(section: string): Promise<any> {
+	if (!hasConfigurationCapability) {
+		return undefined;
+	}
+	try {
+		return await connection.workspace.getConfiguration({
+			section: section
+		});
+	} catch (error) {
+		connection.console.error(`Failed to get configuration for ${section}: ${error}`);
+		return undefined;
+	}
+}
+
+async function loadCustomSymbols(): Promise<void> {
+	try {
+		// Get custom configuration from VS Code settings
+		const customTables = await getCustomConfiguration('kuskus.customTables') || [];
+		const customFunctions = await getCustomConfiguration('kuskus.customFunctions') || [];
+
+		if (customTables.length === 0 && customFunctions.length === 0) {
+			connection.console.log('No custom tables or functions configured');
+			return;
+		}
+
+		connection.console.log(`Loading ${customTables.length} custom tables and ${customFunctions.length} custom functions`);
+
+		// Create custom global state
+		const customState = createCustomGlobalState(customTables, customFunctions, 'CustomDatabase');
+
+		// Merge with existing global state
+		kustoGlobalState = mergeGlobalStates(kustoGlobalState, customState);
+
+		// Update all code scripts with new global state
+		kustoCodeScripts.forEach((value, key) => {
+			if (value) {
+				kustoCodeScripts.set(key, value.WithGlobals(kustoGlobalState));
+			}
+		});
+
+		connection.console.log('Custom symbols loaded successfully');
+	} catch (error) {
+		connection.console.error(`Failed to load custom symbols: ${error}`);
+	}
 }
 
 // Only keep settings for open documents
@@ -241,7 +297,7 @@ connection.onCompletion(
         try {
             return getVSCodeCompletionItemsAtPosition(kustoCodeScript, _textDocumentPosition.position.line + 1, _textDocumentPosition.position.character + 1)
         } catch (e) {
-            connection.console.error(e);
+            connection.console.error(String(e));
             return [];
         }
     }
