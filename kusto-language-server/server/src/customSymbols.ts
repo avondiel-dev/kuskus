@@ -3,10 +3,9 @@
  *
  * Converts VS Code configuration (customTables, customProperties, customFunctions)
  * into Kusto Language Symbols for IntelliSense support.
+ *
+ * Note: Kusto.Language bridge is loaded in server.ts, no need to import it here
  */
-
-import "../node_modules/@kusto/language-service-next/bridge";
-import "../node_modules/@kusto/language-service-next/Kusto.Language.Bridge";
 
 /**
  * Interface matching kuskus.customTables configuration
