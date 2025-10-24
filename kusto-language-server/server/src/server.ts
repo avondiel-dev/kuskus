@@ -222,6 +222,13 @@ async function loadCustomSymbols(): Promise<void> {
 		// Merge with existing global state
 		kustoGlobalState = mergeGlobalStates(kustoGlobalState, customState);
 
+		// Debug: Log what's in the global state
+		if (kustoGlobalState && kustoGlobalState.Database) {
+			const db = kustoGlobalState.Database;
+			connection.console.log(`[Kuskus] Global state database: ${db.Name}`);
+			connection.console.log(`[Kuskus] Database members count: ${db.Members ? db.Members.Count : 0}`);
+		}
+
 		connection.console.log(`[Kuskus] Updating ${kustoCodeScripts.size} code scripts with new global state...`);
 
 		// Update all code scripts with new global state
