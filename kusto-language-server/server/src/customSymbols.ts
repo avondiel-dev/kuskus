@@ -110,27 +110,40 @@ export function createCustomGlobalState(
     customFunctions: CustomFunctionConfig[] = [],
     databaseName: string = "CustomDatabase"
 ): any {
+    // Check if Kusto.Language is available
+    if (typeof Kusto === 'undefined' || !Kusto.Language || !Kusto.Language.Symbols) {
+        throw new Error('Kusto.Language bridge is not loaded');
+    }
+
     const symbols: any[] = [];
 
     // Create table symbols
     for (const tableConfig of customTables) {
         try {
+            console.log(`[CustomSymbols] Creating table symbol for: ${tableConfig.name}`);
             const tableSymbol = createTableSymbol(tableConfig);
             symbols.push(tableSymbol);
+            console.log(`[CustomSymbols] Successfully created table symbol: ${tableConfig.name}`);
         } catch (error) {
-            console.error(`Failed to create table symbol for ${tableConfig.name}:`, error);
+            console.error(`[CustomSymbols] Failed to create table symbol for ${tableConfig.name}:`, error);
+            // Continue with other symbols
         }
     }
 
     // Create function symbols
     for (const functionConfig of customFunctions) {
         try {
+            console.log(`[CustomSymbols] Creating function symbol for: ${functionConfig.name}`);
             const functionSymbol = createFunctionSymbol(functionConfig);
             symbols.push(functionSymbol);
+            console.log(`[CustomSymbols] Successfully created function symbol: ${functionConfig.name}`);
         } catch (error) {
-            console.error(`Failed to create function symbol for ${functionConfig.name}:`, error);
+            console.error(`[CustomSymbols] Failed to create function symbol for ${functionConfig.name}:`, error);
+            // Continue with other symbols
         }
     }
+
+    console.log(`[CustomSymbols] Created ${symbols.length} symbols total`);
 
     // Create database symbol with all tables and functions
     const databaseSymbol = new Kusto.Language.Symbols.DatabaseSymbol.ctor(

@@ -86,7 +86,14 @@ connection.onInitialized(async () => {
     }
 
     // Load custom symbols from configuration
-    await loadCustomSymbols();
+    try {
+        connection.console.log('[Kuskus] Starting to load custom symbols...');
+        await loadCustomSymbols();
+        connection.console.log('[Kuskus] Custom symbols loading complete');
+    } catch (error) {
+        connection.console.error(`[Kuskus] Failed to load custom symbols on initialization: ${error}`);
+        // Don't crash - continue without custom symbols
+    }
 });
 
 connection.onRequest('kuskus.loadSymbols', async ({ clusterUri, tenantId, database }: { clusterUri: string, tenantId: string, database: string }) => {
@@ -192,22 +199,30 @@ async function getCustomConfiguration(section: string): Promise<any> {
 
 async function loadCustomSymbols(): Promise<void> {
 	try {
+		connection.console.log('[Kuskus] Getting custom configuration...');
+
 		// Get custom configuration from VS Code settings
 		const customTables = await getCustomConfiguration('kuskus.customTables') || [];
 		const customFunctions = await getCustomConfiguration('kuskus.customFunctions') || [];
 
+		connection.console.log(`[Kuskus] Found ${customTables.length} custom tables and ${customFunctions.length} custom functions in config`);
+
 		if (customTables.length === 0 && customFunctions.length === 0) {
-			connection.console.log('No custom tables or functions configured');
+			connection.console.log('[Kuskus] No custom tables or functions configured');
 			return;
 		}
 
-		connection.console.log(`Loading ${customTables.length} custom tables and ${customFunctions.length} custom functions`);
+		connection.console.log(`[Kuskus] Creating custom global state...`);
 
 		// Create custom global state
 		const customState = createCustomGlobalState(customTables, customFunctions, 'CustomDatabase');
 
+		connection.console.log(`[Kuskus] Merging with existing global state...`);
+
 		// Merge with existing global state
 		kustoGlobalState = mergeGlobalStates(kustoGlobalState, customState);
+
+		connection.console.log(`[Kuskus] Updating code scripts...`);
 
 		// Update all code scripts with new global state
 		kustoCodeScripts.forEach((value, key) => {
@@ -216,9 +231,13 @@ async function loadCustomSymbols(): Promise<void> {
 			}
 		});
 
-		connection.console.log('Custom symbols loaded successfully');
+		connection.console.log('[Kuskus] Custom symbols loaded successfully');
 	} catch (error) {
-		connection.console.error(`Failed to load custom symbols: ${error}`);
+		connection.console.error(`[Kuskus] Failed to load custom symbols: ${error}`);
+		if (error instanceof Error) {
+			connection.console.error(`[Kuskus] Error stack: ${error.stack}`);
+		}
+		throw error; // Re-throw to see if this is causing the crash
 	}
 }
 
