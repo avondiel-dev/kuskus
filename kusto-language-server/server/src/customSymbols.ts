@@ -161,34 +161,63 @@ export function mergeGlobalStates(
     existingState: any,
     customState: any
 ): any {
-    // If no existing state, return custom state
-    if (!existingState || !existingState.Database) {
-        console.log('[CustomSymbols] No existing state, using custom state only');
-        return customState;
-    }
-
     // If no custom state, return existing state
     if (!customState || !customState.Database) {
         console.log('[CustomSymbols] No custom state, using existing state only');
         return existingState;
     }
 
-    console.log('[CustomSymbols] Merging custom symbols with existing database');
+    // Check if existingState has a real database (not just the Default state)
+    const hasExistingDatabase = existingState &&
+                                existingState.Database &&
+                                existingState.Database.Name &&
+                                existingState.Database.Name !== 'Default';
 
-    // Get custom symbols as array
-    const customSymbols: any[] = [];
-    const customMembers = customState.Database.Members;
-
-    if (customMembers && customMembers.Count > 0) {
-        for (let i = 0; i < customMembers.Count; i++) {
-            customSymbols.push(customMembers._items[i]);
-        }
+    // If no existing database, just return custom state
+    if (!hasExistingDatabase) {
+        console.log('[CustomSymbols] No existing database, using custom state only');
+        return customState;
     }
 
-    console.log(`[CustomSymbols] Adding ${customSymbols.length} custom symbols to existing database`);
+    console.log(`[CustomSymbols] Merging custom symbols with existing database: ${existingState.Database.Name}`);
 
-    // Use the Kusto API's AddSymbols method to merge
-    const mergedDatabase = existingState.Database.AddSymbols(customSymbols);
+    // Get all symbols from custom state's database
+    const customDb = customState.Database;
+    const customSymbols: any[] = [];
 
-    return existingState.WithDatabase(mergedDatabase);
+    // Try to get symbols from the database
+    try {
+        // The database has tables and functions as separate collections
+        // Let's just use AddSymbols with an empty array and then add our custom database
+        // Or simpler: just return the custom state since we want these symbols available
+
+        // For now, if there's an existing database from a cluster, keep it
+        // and just add our custom symbols to it
+        const allSymbols: any[] = [];
+
+        // Collect all members from custom database
+        if (customDb.Tables) {
+            const tables = customDb.Tables;
+            for (let i = 0; i < tables.length; i++) {
+                allSymbols.push(tables[i]);
+            }
+        }
+
+        if (customDb.Functions) {
+            const functions = customDb.Functions;
+            for (let i = 0; i < functions.length; i++) {
+                allSymbols.push(functions[i]);
+            }
+        }
+
+        console.log(`[CustomSymbols] Adding ${allSymbols.length} custom symbols to existing database`);
+
+        // Use AddSymbols to add our custom symbols to the existing database
+        const mergedDatabase = existingState.Database.AddSymbols(allSymbols);
+        return existingState.WithDatabase(mergedDatabase);
+    } catch (error) {
+        console.error('[CustomSymbols] Error merging databases:', error);
+        console.log('[CustomSymbols] Falling back to custom state only');
+        return customState;
+    }
 }
