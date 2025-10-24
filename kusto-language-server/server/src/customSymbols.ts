@@ -167,15 +167,16 @@ export function mergeGlobalStates(
         return existingState;
     }
 
-    // Check if existingState has a real database (not just the Default state)
+    // Check if existingState has a real database (not just the Default state or our CustomDatabase)
     const hasExistingDatabase = existingState &&
                                 existingState.Database &&
                                 existingState.Database.Name &&
-                                existingState.Database.Name !== 'Default';
+                                existingState.Database.Name !== 'Default' &&
+                                existingState.Database.Name !== 'CustomDatabase';
 
     // If no existing database, just return custom state
     if (!hasExistingDatabase) {
-        console.log('[CustomSymbols] No existing database, using custom state only');
+        console.log('[CustomSymbols] No existing database (or CustomDatabase), using custom state only');
         return customState;
     }
 

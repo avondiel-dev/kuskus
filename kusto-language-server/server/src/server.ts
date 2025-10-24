@@ -222,14 +222,26 @@ async function loadCustomSymbols(): Promise<void> {
 		// Merge with existing global state
 		kustoGlobalState = mergeGlobalStates(kustoGlobalState, customState);
 
-		connection.console.log(`[Kuskus] Updating code scripts...`);
+		connection.console.log(`[Kuskus] Updating ${kustoCodeScripts.size} code scripts with new global state...`);
 
 		// Update all code scripts with new global state
+		let updated = 0;
 		kustoCodeScripts.forEach((value, key) => {
 			if (value) {
 				kustoCodeScripts.set(key, value.WithGlobals(kustoGlobalState));
+				updated++;
+				connection.console.log(`[Kuskus] Updated code script for: ${key}`);
 			}
 		});
+
+		connection.console.log(`[Kuskus] Updated ${updated} code scripts`);
+
+		// Revalidate all open documents with the new symbols
+		connection.console.log('[Kuskus] Revalidating all open documents...');
+		documents.all().forEach(doc => {
+			validateTextDocument(doc);
+		});
+		connection.console.log('[Kuskus] Revalidation complete');
 
 		connection.console.log('[Kuskus] Custom symbols loaded successfully');
 	} catch (error) {
