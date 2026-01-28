@@ -55,5 +55,5 @@ vsce package
 
 ## Git Remotes
 
-- `origin`: https://github.com/dvag-axel-von-dielingen/kuskus.git (fork)
+- `origin`: https://github.com/avondiel-dev/kuskus.git (fork)
 - `upstream`: https://github.com/rosshamish/kuskus.git (original)
